@@ -1,0 +1,726 @@
+---
+title: "Turkey through time"
+author: "Jack Sudds"
+date: "05/08/2021"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Package}
+library(tidyverse) #install.packages("tidyverse")
+library(readxl) #install.packages("readxl")
+library(here) #install.packages("here")
+library(janitor) #install.packages("janitor")
+library(kableExtra) #install.packages("kableExtra")
+library(skimr) #install.packages("skimr")
+library(dplyr) #install.packages("dplyr")
+library(RColorBrewer) #install.packages("RColorBrewer")
+library(formattable) #install.packages("formattable")
+library(wesanderson)#install.packages("wesanderson")
+library(reshape2)
+library(ggtext) #install.packages("ggtext")
+library(psych)#install.packages("psych")
+```
+
+```{r import}
+
+Plan_B <- read_excel(here("../data/master.xlsx"), range = "A1:AN993", sheet = "Plan_B")
+
+Clarendon <- read_excel(here("../data/master.xlsx"), range = "A1:Y11", sheet = "data")
+
+Turk <- read_excel(here("../data/master.xlsx"), range = "A1:W1026", sheet = "Database")
+
+NMS <- read_excel(here("../data/master.xlsx"), range = "A11:T113", sheet = "data")
+NMSc <- read_excel(here("../data/master.xlsx"), range = "A1:T1", sheet = "data", col_names = FALSE)
+```
+
+```{r NMS data}
+colnames(NMS) <- NMSc
+
+NMS_LR <- NMS %>%
+  melt(value.name = "measurement", id=1:9, na.rm = TRUE) %>%
+  unite(Measurement, c(Element, variable)) %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm", "metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD"))
+
+NMS_LR$ratio <- NMS_LR$measurement/Baseline$Mean[match(NMS_LR$Measurement, Baseline$Measurement)]
+NMS_LR$log <- round(log10(NMS_LR$ratio), digits = 2)
+
+ggplot(NMS_LR, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Chapman Collection",
+    subtitle = "by Coat Colour"
+  ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Coat_Colour ~ Site)
+
+ggsave(here("graphs", "Chapman.jpeg"), dpi = 700)
+
+ggplot(filter(NMS, Element == "metacarpal"), aes(x=GL, y=SD, colour = Coat_Colour, shape = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "GL",
+    y = "SD",
+    title = "Metacarpal"
+  )
+
+ggplot(filter(NMS, Element == "metacarpal"), aes(x=Bp, y=Bd, colour = Coat_Colour, shape = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bp",
+    y = "Bd",
+    title = "Metacarpal"
+  )
+```
+
+
+```{r cleanup}
+
+Plan_B_clean = Plan_B[rowSums(is.na(Plan_B)) <= 31, ]
+
+B_femur = Plan_B_clean %>% filter(Element == "femur") %>% remove_empty("cols")
+B_scapula = Plan_B_clean %>% filter(Element == "scapula") %>% remove_empty("cols")
+B_humerus = Plan_B_clean %>% filter(Element == "humerus")%>% remove_empty("cols")
+B_radius = Plan_B_clean %>% filter(Element == "radius")%>% remove_empty("cols")
+B_tibia = Plan_B_clean %>% filter(Element == "tibia")%>% remove_empty("cols")
+B_astragalus = Plan_B_clean %>% filter(Element == "astragalus")%>% remove_empty("cols")
+B_metacarpal = Plan_B_clean %>% filter(Element == "metacarpal")%>% remove_empty("cols")
+B_metatarsal = Plan_B_clean %>% filter(Element == "metatarsal")%>% remove_empty("cols")
+B_calcaneus = Plan_B_clean %>% filter(Element == "calcaneus")%>% remove_empty("cols")
+B_ulna = Plan_B_clean %>% filter(Element == "ulna")%>% remove_empty("cols")
+
+```
+
+```{r Freq checks}
+
+Plan_B_elements <- Plan_B_clean %>%
+  count(Element)
+
+Plan_B_sex <- Plan_B_clean %>%
+  count(Sex)
+
+Clarendon_elements <- Clarendon %>%
+  count(Element)
+
+Plan_B_long <- melt(Plan_B_clean, value.name = "measurement", id=1:9, na.rm = TRUE)
+Turk_Long <- melt(Turk, value.name = "measurement", id=1:6, na.rm = TRUE)
+```
+
+```{r Freq checks}
+
+Plan_B_elements <- Plan_B_clean %>%
+  count(Element)
+
+Plan_B_sex <- Plan_B_clean %>%
+  count(Sex)
+
+Clarendon_elements <- Clarendon %>%
+  count(Element)
+
+Plan_B_long <- melt(Plan_B_clean, value.name = "measurement", id=1:9, na.rm = TRUE)
+
+Clarendonl <- melt(Clarendon, value.name = "measurement", id=1:9, na.rm = TRUE)
+
+Termessosl <- Plan_B_long %>%
+  filter(Site == "Termessos")
+Termessos <- Plan_B_clean %>%
+  filter(Site == "Termessos")
+Phoenix_Park <- Plan_B_long %>%
+  filter(Site == "Phoenix Park")
+Epping <- Plan_B_long %>%
+  filter(Site == "Epping Forest")
+Richmond <- Plan_B_long %>%
+  filter(Site == "Richmond Park")
+Paris <- Plan_B_long %>%
+  filter(Site == "Paris_Menagerie")
+
+measures_count <- Plan_B_long %>%
+  count(Element, variable)
+
+```
+
+```{r Termessos compared to Baseline}
+
+Plan_B_long <- melt(Plan_B_clean, value.name = "measurement", id=1:9, na.rm = TRUE)
+
+Termessosl <- Plan_B_long %>%
+  filter(Site == "Termessos")
+
+Term_prep <- Termessosl %>%
+  unite(Measurement, c(Element, variable)) 
+
+Term_prep <- Term_prep %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+Term_prep$ratio <- Term_prep$measurement/Baseline$Mean[match(Term_prep$Measurement, Baseline$Measurement)]
+Term_prep$log <- round(log10(Term_prep$ratio), digits = 2)
+
+ggplot(Term_prep, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Termessos",
+    subtitle = "Modern"
+  ) +
+  scale_x_continuous(breaks = seq(-0.2, 0.2, by = 0.05),
+                     limits = c(-0.2, 0.2)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks = seq(0,30,by=5)) +
+  coord_cartesian(ylim = c(0,30),
+                  xlim = c(-0.2, 0.2))
+
+
+ggsave(here("graphs", "Modern_Termessos.jpeg"), dpi = 700)
+```
+
+```{r Turkey prep}
+
+Turk_prep <- Turk_Long %>%
+  unite(Measurement, c(Element, variable))
+
+Turk_prep <- Turk_prep %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+Turk_prep$ratio <- Turk_prep$measurement/Baseline$Mean[match(Turk_prep$Measurement, Baseline$Measurement)]
+Turk_prep$log <- round(log10(Turk_prep$ratio), digits = 2)
+
+Turk_sites <- Turk_prep %>%
+  count(Site, Date)
+
+ggplot(Turk_prep, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Date~., scales = "free_y")
+
+ggsave(here("graphs", "Turk_Age.jpeg"), width = 10, height = 30)
+
+```
+
+```{r Turkey Sites}
+
+Ilipinar <- filter(Turk_prep, Site == "Ilipinar")
+Yenibademli <- filter(Turk_prep, Site == "Yenibademli Hoyuk")
+Fikirtepe <- filter(Turk_prep, Site == "Fikirtepe")
+Okuzini <- filter(Turk_prep, Site == "Okuzini")
+Ulucak <- filter(Turk_prep, Site == "Ulucak Hoyuk")
+Demichihuyuk <- filter(Turk_prep, Site == "Demircihüyük")
+Badermagaci <- filter(Turk_prep, Site == "Bademagaci Hoyuck")
+Besik <- filter(Turk_prep, Site == "Besik_Yassitepe")
+Troia <- filter(Turk_prep, Site == "Troia")
+Yenikapi <- filter(Turk_prep, Site == "Yenikapi")
+Sagalassos <- filter(Turk_prep, Site == "Sagalassos")
+Pendik <- filter(Turk_prep, Site == "Pendik")
+Kilise <- filter(Turk_prep, Site == "Kilise Tepe")
+Hoyucek <- filter(Turk_prep, Site == "Hoyucek")
+
+```
+
+```{r Site Graphs}
+ggplot(Ilipinar, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Ilipinar",
+    subtitle = "Neolithic"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Neo_Ilipinar.jpeg"), dpi = 700)
+
+ggplot(Yenibademli, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Yenibademli",
+    subtitle = "Bronze Age"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Ba_Yenibademli.jpeg"), dpi = 700)
+
+ggplot(Fikirtepe, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Fikirtepe",
+    subtitle = "Neolithic"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Neo_Fikir.jpeg"), dpi = 700)
+
+ggplot(Okuzini, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Okuzini",
+    subtitle = "Palaeolithic"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Palaeo_Okuzini.jpeg"), dpi = 700)
+
+ggplot(Ulucak, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Ulucak Hoyuk",
+    subtitle = "Neo / Bronze Age"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))+
+  facet_grid(Date~.)
+
+
+ggsave(here("graphs", "Neo_BA_Ulucak.jpeg"), dpi = 700)
+
+ggplot(Demichihuyuk, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Demichihukuk",
+    subtitle = "Bronze Age"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Ba_Demichihuyuk.jpeg"), dpi = 700)
+
+ggplot(Badermagaci, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Badermagaci",
+    subtitle = "Neo/Ba"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) +
+  facet_grid(Date~.)
+
+ggsave(here("graphs", "Neo_Ba_Badermagaci.jpeg"), dpi = 700)
+
+ggplot(Besik, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Besik-Yassitepe",
+    subtitle = "Bronze Age"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Ba_Besik_Yassitepe.jpeg"), dpi = 700)
+
+ggplot(Troia, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Troia",
+    subtitle = "Bronze Age"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Ba_Troia.jpeg"), dpi = 700)
+
+ggplot(Yenikapi, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Yenikapi",
+    subtitle = "Neolithic"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Neo_Yenikapi.jpeg"), dpi = 700)
+
+ggplot(Sagalassos, aes(x=log, y=..count..)) +
+  geom_bar() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Sagalassos",
+    subtitle = "Roman/Medieval"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) +
+  facet_grid(Date~.)
+
+ggsave(here("graphs", "Roman_Medieval_Sagalassos.jpeg"), dpi = 700)
+
+ggplot(Pendik, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Pendik",
+    subtitle = "Neolithic"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Neo_Pendik.jpeg"), dpi = 700)
+
+ggplot(Kilise, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Kilise Tepe",
+    subtitle = "Iron Age"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "IA_Kilise.jpeg"), dpi = 700)
+
+ggplot(Hoyucek, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Hoyucek",
+    subtitle = "Neolithic"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2))
+
+ggsave(here("graphs", "Neo_Hoyucek.jpeg"), dpi = 700)
+```
+
+```{r Other Graphs}
+
+period_check <- count(Turk_prep, Date, Site)
+
+ggplot(filter(Turk_prep, Date=="Paleolithic"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Palaeolithic",
+    subtitle = "Okuzini"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) 
+  #facet_grid(Site~.)
+
+ggsave(here("graphs", "Palaeolithic.jpeg"), dpi = 700)
+
+ggplot(filter(Turk_prep, Date=="Neolithic"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Neolithic",
+    subtitle = "By Site"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) +
+  facet_grid(Site~., scales = "free_y")
+
+ggsave(here("graphs", "Neolithic.png"), width = 10, height = 30)
+
+ggplot(filter(Turk_prep, Date=="Bronze Age"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Bronze Age",
+    subtitle = "By Site"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) +
+  facet_grid(Site~., scales = "free_y")
+
+ggsave(here("graphs", "Bronze_Age.jpeg"), width = 10, height = 30)
+
+
+ggplot(filter(Turk_prep, Date=="Iron Age"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Iron Age",
+    subtitle = "Kilise Tepe"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) 
+  #facet_grid(Site~.)
+
+ggsave(here("graphs", "Iron_Age.jpeg"), dpi = 700)
+
+ggplot(filter(Turk_prep, Date=="Roman"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Roman",
+    subtitle = "Sagalassos"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) 
+  #facet_grid(Site~.)
+
+ggsave(here("graphs", "Roman.jpeg"), dpi = 700)
+
+ggplot(filter(Turk_prep, Date=="Medieval"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Medieval",
+    subtitle = "Sagalassos"
+  ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) 
+  #facet_grid(Site~.)
+
+ggsave(here("graphs", "Medieval.jpeg"), dpi = 700)
+```
+

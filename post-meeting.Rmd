@@ -1,0 +1,136 @@
+---
+title: "Post_meeting"
+author: "Jack Sudds"
+date: "16/08/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Package}
+library(tidyverse) #install.packages("tidyverse")
+library(readxl) #install.packages("readxl")
+library(here) #install.packages("here")
+library(janitor) #install.packages("janitor")
+library(kableExtra) #install.packages("kableExtra")
+library(skimr) #install.packages("skimr")
+library(dplyr) #install.packages("dplyr")
+library(RColorBrewer) #install.packages("RColorBrewer")
+library(formattable) #install.packages("formattable")
+library(wesanderson)#install.packages("wesanderson")
+library(reshape2)
+library(ggtext) #install.packages("ggtext")
+library(psych)#install.packages("psych")
+library(maps) #install.packages("maps")
+```
+
+```{r planes}
+
+Working_all_long <- all_long %>%
+separate(Measurement, into=c('Element', 'Metric'), sep = '_')
+Working_all_long$Plane <- ifelse(Working_all_long$Metric %in% c("Bd","Bp","B@F","BFd","BFdl","BFdm","BFp","BT","BG"), 'Breadth',
+                                 ifelse(Working_all_long$Metric %in% c("Dd","Dp","Ddl","Ddm","Dl","Dm"), 'Depth',
+                                        ifelse(Working_all_long$Metric %in% c("GL","GLC","GLl","GLm","GLP","LG"), 'Length', 'Other')))
+
+ggplot(filter(Working_all_long, !is.na(Coat_Colour), Sex!="U", Site == "Richmond Park", Plane != "Other"), aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Richmond Park"
+  )+
+  scale_y_continuous(expand = c(0,0))+
+  facet_grid(Coat_Colour~Plane, scales = "free_y")
+
+ggplot(filter(Working_all_long, !is.na(Coat_Colour), Sex!="U", Site == "Epping Forest", Plane != "Other"), aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "Epping Forest"
+  )+
+  scale_y_continuous(expand = c(0,0))+
+  facet_grid(Coat_Colour~Plane, scales = "free_y")
+
+ggplot(filter(Working_all_long, !is.na(Coat_Colour), Sex!="U", Plane != "Other"), aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 0.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  labs(
+    title = "All"
+  )+
+  scale_y_continuous(expand = c(0,0))+
+  facet_grid(Coat_Colour~Plane, scales = "free_y")
+```
+
+```{r bigge graph}
+
+Bigge <- Working_all_long %>%
+  select(log, Plane, Date, Site, Coat_Colour) %>%
+  filter(Coat_Colour != "U", !is.na(Coat_Colour)) %>%
+  group_by(Coat_Colour, Plane) %>%
+  mutate(Mean = mean(log))
+  
+Bigge <- Bigge %>%
+  subset(select = -c(log)) %>%
+  distinct() %>%
+  filter(Plane != "Other")
+
+ggplot() +
+  geom_point(subset(Bigge, Plane == "Breadth"), mapping = aes(x=Coat_Colour, y=Mean, colour = Plane, shape = Plane)) +
+  geom_point(subset(Bigge, Plane == "Depth"), mapping =  aes(x=Coat_Colour, y=Mean, colour = Plane, shape = Plane)) +
+  geom_point(subset(Bigge, Plane == "Length"), mapping =  aes(x=Coat_Colour, y=Mean, colour = Plane, shape = Plane)) +
+  geom_line(subset(Bigge, Plane == "Breadth"), mapping = aes(x=Coat_Colour, y=Mean, colour = Plane, group = Plane)) +
+  geom_line(subset(Bigge, Plane == "Depth"), mapping =  aes(x=Coat_Colour, y=Mean, colour = Plane, group = Plane)) +
+  geom_line(subset(Bigge, Plane == "Length"), mapping =  aes(x=Coat_Colour, y=Mean, colour = Plane, group = Plane))
+```
+
+
+```{r working counts}
+
+Working <- count(all_long, Site)
+WorkingNMS <- count(NMS, Site)
+WorkingT <- count(T_prep, Site, Date)
+WorkingMetricC <- count(Plan_B_long, variable, Element)
+WorkngCount <- count(filter(Working_all_long, !is.na(Coat_Colour), Plane != "Other"), Site, Coat_Colour)
+```
+
+```{r mapping}
+map_dat <- read_excel(here("../data/master.xlsx"), range = "A1:E25", sheet = "Mapping")
+
+Brit_map <- map_data("world", "UK")
+
+ggplot(aes(x=long, y=lat)) +
+  geom_sf(Brit_map) +
+  geom_point(map_dat)+
+  theme_void()+
+  theme(legend.position = "none")
+```
+

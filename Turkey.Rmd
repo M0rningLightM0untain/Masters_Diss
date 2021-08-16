@@ -1,0 +1,341 @@
+---
+title: "Turkey"
+author: "Jack Sudds"
+date: "03/08/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Package}
+library(tidyverse) #install.packages("tidyverse")
+library(readxl) #install.packages("readxl")
+library(here) #install.packages("here")
+library(janitor) #install.packages("janitor")
+library(kableExtra) #install.packages("kableExtra")
+library(skimr) #install.packages("skimr")
+library(dplyr) #install.packages("dplyr")
+library(RColorBrewer) #install.packages("RColorBrewer")
+library(formattable) #install.packages("formattable")
+library(wesanderson)#install.packages("wesanderson")
+library(reshape2)
+library(ggtext) #install.packages("ggtext")
+library(psych)#install.packages("psych")
+```
+
+```{r import}
+
+Plan_B <- read_excel(here("../data/master.xlsx"), range = "A1:AN993", sheet = "Plan_B")
+
+Clarendon <- read_excel(here("../data/master.xlsx"), range = "A1:Y11", sheet = "data")
+
+```
+
+```{r cleanup}
+
+Plan_B_clean = Plan_B[rowSums(is.na(Plan_B)) <= 31, ]
+
+B_femur = Plan_B_clean %>% filter(Element == "femur") %>% remove_empty("cols")
+B_scapula = Plan_B_clean %>% filter(Element == "scapula") %>% remove_empty("cols")
+B_humerus = Plan_B_clean %>% filter(Element == "humerus")%>% remove_empty("cols")
+B_radius = Plan_B_clean %>% filter(Element == "radius")%>% remove_empty("cols")
+B_tibia = Plan_B_clean %>% filter(Element == "tibia")%>% remove_empty("cols")
+B_astragalus = Plan_B_clean %>% filter(Element == "astragalus")%>% remove_empty("cols")
+B_metacarpal = Plan_B_clean %>% filter(Element == "metacarpal")%>% remove_empty("cols")
+B_metatarsal = Plan_B_clean %>% filter(Element == "metatarsal")%>% remove_empty("cols")
+B_calcaneus = Plan_B_clean %>% filter(Element == "calcaneus")%>% remove_empty("cols")
+B_ulna = Plan_B_clean %>% filter(Element == "ulna")%>% remove_empty("cols")
+
+```
+
+```{r Freq checks}
+
+Plan_B_elements <- Plan_B_clean %>%
+  count(Element)
+
+Plan_B_sex <- Plan_B_clean %>%
+  count(Sex)
+
+Clarendon_elements <- Clarendon %>%
+  count(Element)
+
+Plan_B_long <- melt(Plan_B_clean, value.name = "measurement", id=1:9, na.rm = TRUE)
+```
+
+```{r Freq checks}
+
+Plan_B_elements <- Plan_B_clean %>%
+  count(Element)
+
+Plan_B_sex <- Plan_B_clean %>%
+  count(Sex)
+
+Clarendon_elements <- Clarendon %>%
+  count(Element)
+
+Plan_B_long <- melt(Plan_B_clean, value.name = "measurement", id=1:9, na.rm = TRUE)
+
+Clarendonl <- melt(Clarendon, value.name = "measurement", id=1:9, na.rm = TRUE)
+
+Termessosl <- Plan_B_long %>%
+  filter(Site == "Termessos")
+Termessos <- Plan_B_clean %>%
+  filter(Site == "Termessos")
+Phoenix_Park <- Plan_B_long %>%
+  filter(Site == "Phoenix Park")
+Epping <- Plan_B_long %>%
+  filter(Site == "Epping Forest")
+Richmond <- Plan_B_long %>%
+  filter(Site == "Richmond Park")
+Paris <- Plan_B_long %>%
+  filter(Site == "Paris_Menagerie")
+
+measures_count <- Plan_B_long %>%
+  count(Element, variable)
+
+```
+
+```{r Termessos compared to Baseline}
+
+Plan_B_long <- melt(Plan_B_clean, value.name = "measurement", id=1:9, na.rm = TRUE)
+
+Termessosl <- Plan_B_long %>%
+  filter(Site == "Termessos")
+
+Term_prep <- Termessosl %>%
+  unite(Measurement, c(Element, variable)) 
+
+Term_prep <- Term_prep %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+Term_prep$ratio <- Term_prep$measurement/Baseline$Mean[match(Term_prep$Measurement, Baseline$Measurement)]
+Term_prep$log <- round(log10(Term_prep$ratio), digits = 2)
+
+ggplot(Term_prep, aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_x_continuous(breaks = seq(-0.2, 0.2, by = 0.05),
+                     limits = c(-0.2, 0.2)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks = seq(0,30,by=5)) +
+  coord_cartesian(ylim = c(0,30))
+```
+
+```{r Paris}
+Paris_prep <- Paris %>%
+  unite(Measurement, c(Element, variable)) 
+
+Paris_prep <- Paris_prep %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+Paris_prep$ratio <- Paris_prep$measurement/Baseline$Mean[match(Paris_prep$Measurement, Baseline$Measurement)]
+Paris_prep$log <- round(log10(Paris_prep$ratio), digits = 2)
+
+ggplot(Paris_prep, aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_x_continuous(breaks = seq(-0.2, 0.2, by = 0.05),
+                     limits = c(-0.2, 0.2)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks = seq(0,60, by=5))+
+  coord_cartesian(ylim = c(0,60))
+
+
+ggsave(here("graphs", "Paris_Menagerie.jpeg"), dpi = 700)
+```
+
+```{r Richmond}
+Rich_prep <- Richmond %>%
+  unite(Measurement, c(Element, variable)) 
+
+Rich_prep$Age <- as.character(Rich_prep$Age)
+
+Rich_prep <- Rich_prep %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+Rich_prep$ratio <- Rich_prep$measurement/Baseline$Mean[match(Rich_prep$Measurement, Baseline$Measurement)]
+Rich_prep$log <- round(log10(Rich_prep$ratio), digits = 2)
+
+ggplot(Rich_prep, aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+    scale_x_continuous(breaks = seq(-0.2, 0.2, by = 0.05),
+                     limits = c(-0.2, 0.2)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks = seq(0,30,by=5)) +
+  coord_cartesian(ylim = c(0,30))
+
+
+ggsave(here("graphs", "Modern_Richmond.jpeg"), dpi = 700)
+```
+
+```{r Epping}
+Epp_prep <- Epping %>%
+  unite(Measurement, c(Element, variable)) 
+
+Epp_prep$Age <- as.character(Epp_prep$Age)
+
+Epp_prep <- Epp_prep %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+Epp_prep$ratio <- Epp_prep$measurement/Baseline$Mean[match(Epp_prep$Measurement, Baseline$Measurement)]
+Epp_prep$log <- round(log10(Epp_prep$ratio), digits = 2)
+
+ggplot(Epp_prep, aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+    scale_x_continuous(breaks = seq(-0.2, 0.2, by = 0.05),
+                     limits = c(-0.2, 0.2)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks = seq(0,40, by=5))+
+  coord_cartesian(ylim = c(0,40))
+
+
+ggsave(here("graphs", "Modern_Epping.jpeg"), dpi = 700)
+
+ggplot(Epp_prep, aes(x=log, y=..count.., fill = Age)) +
+  geom_bar() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+    scale_x_continuous(breaks = seq(-0.2, 0.2, by = 0.05),
+                     limits = c(-0.2, 0.2)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks = seq(0,40, by=5))+
+  coord_cartesian(ylim = c(0,40))
+```
+
+```{r Clarendon}
+Cl_prep <- Clarendonl %>%
+  unite(Measurement, c(Element, variable)) 
+
+Cl_prep$measurement <- as.numeric(Cl_prep$measurement)
+
+Cl_prep <- Cl_prep %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+Cl_prep$ratio <- Cl_prep$measurement/Baseline$Mean[match(Cl_prep$Measurement, Baseline$Measurement)]
+Cl_prep$log <- round(log10(Cl_prep$ratio), digits = 2)
+
+ggplot(Cl_prep, aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+    scale_x_continuous(breaks = seq(-0.2, 0.2, by = 0.05),
+                     limits = c(-0.2, 0.2)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks = seq(0,5,by=1)) +
+  coord_cartesian(ylim = c(0,5))
+
+
+ggsave(here("graphs", "Clarendon.jpeg"), dpi = 700)
+
+ggplot(filter(all_long, Site=="Richmond Park"), aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) +
+  facet_wrap(.~Coat_Colour, scales = "free_y")
+
+ggplot(filter(all_long, Coat_Colour=="White", Sex!="U"), aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) +
+  facet_wrap(.~Site, scales = "free_y")
+
+ggplot(filter(all_long, !is.na(Coat_Colour), Sex!="U"), aes(x=log, y=..count.., fill = Sex)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0))+
+  coord_cartesian(xlim = c(-0.2, 0.2)) +
+  facet_wrap(.~Coat_Colour, scales = "free_y")
+```

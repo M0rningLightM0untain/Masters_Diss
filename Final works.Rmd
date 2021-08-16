@@ -1,0 +1,452 @@
+---
+title: "FInal Works"
+author: "Jack Sudds"
+date: "15/08/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Package}
+library(tidyverse) #install.packages("tidyverse")
+library(readxl) #install.packages("readxl")
+library(here) #install.packages("here")
+library(janitor) #install.packages("janitor")
+library(kableExtra) #install.packages("kableExtra")
+library(skimr) #install.packages("skimr")
+library(dplyr) #install.packages("dplyr")
+library(RColorBrewer) #install.packages("RColorBrewer")
+library(formattable) #install.packages("formattable")
+library(wesanderson)#install.packages("wesanderson")
+library(reshape2)
+library(ggtext) #install.packages("ggtext")
+library(psych)#install.packages("psych")
+```
+
+```{r long join}
+#Prep
+T_prep <- Turk_Long %>%
+  select(-Internal_ID)
+B_prep <- Plan_B_long %>%
+  select(-Internal_ID)
+NMS_prep <- NMSl %>%
+  select(-Internal_ID, -Context, -Side)
+C_prep <- Clarendonl %>%
+  select(-Internal_ID, -Side)
+
+NMS_prep$Other_Code <- as.character(NMS_prep$Other_Code)
+C_prep <- C_prep[-c(37,38, 39, 40, 41, 42, 43, 44, 45, 46),]
+C_prep$measurement <- as.double(C_prep$measurement)
+
+all_long <- bind_rows(T_prep, B_prep, NMS_prep, C_prep)
+
+all_long <- all_long %>%
+  unite(Measurement, c(Element, variable)) %>%
+  filter(Measurement %in% c("astragalus_Bd","astragalus_Dl","astragalus_Dm","astragalus_GLl","astragalus_GLm","femur_Bd","femur_Dd","femur_SD","humerus_Bd","humerus_BT","humerus_Dd","humerus_GL","humerus_SD","metacarpal_Bd","metacarpal_Bp","metacarpal_Dp","metacarpal_GL","metacarpal_SD","metatarsal_Bd","metatarsal_Bp","metatarsal_Dp","metatarsal_GL","metatarsal_SD","radius_Bd","radius_BFd","radius_BFp","radius_Bp","radius_Dd","radius_GL","radius_SD","scapula_BG","scapula_GLP","scapula_LG","scapula_SLC","tibia_Bd","tibia_Bp","tibia_Dd","tibia_GL","tibia_SD"))
+
+all_long$ratio <- all_long$measurement/Baseline$Mean[match(all_long$Measurement, Baseline$Measurement)]
+all_long$log <- round(log10(all_long$ratio), digits = 2)
+
+all_long_gg <- all_long
+all_long_gg$Date <- factor(all_long_gg$Date, levels = c("U", "Paleolithic", "Neolithic", "Bronze Age", "Iron Age", "Roman", "Medieval", "Modern"))
+
+ggplot(filter(all_long_gg, Date!="U"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Date~., scales = "free_y")
+ggsave(here("graphs", "All_Age.jpeg"), width = 10, height = 20)
+
+ggplot(filter(all_long_gg, Date=="Modern"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Site~., scales = "free_y")
+ggsave(here("graphs", "Modern.jpeg"), width = 10, height = 20)
+
+ggplot(filter(all_long_gg, Date=="Paleolithic"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Site~., scales = "free_y")
+ggsave(here("graphs", "Palaeolithic.jpeg"), width = 10, height = 10)
+
+ggplot(filter(all_long_gg, Date=="Neolithic"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Site~., scales = "free_y")
+ggsave(here("graphs", "Neolithic.jpeg"), width = 10, height = 20)
+
+ggplot(filter(all_long_gg, Date=="Bronze Age"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Site~., scales = "free_y")
+ggsave(here("graphs", "Bronze_Age.jpeg"), width = 10, height = 20)
+
+ggplot(filter(all_long_gg, Coat_Colour!="U" & !is.na(Coat_Colour)), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Coat_Colour~., scales = "free_y")
+ggsave(here("graphs", "Colours.jpeg"), width = 10, height = 20)
+
+ggplot(filter(all_long_gg, Coat_Colour!="U" & !is.na(Coat_Colour) & Coat_Colour=="Common"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Site~., scales = "free_y")
+ggsave(here("graphs", "Common.jpeg"), width = 10, height = 20)
+
+ggplot(filter(all_long_gg, Coat_Colour!="U" & !is.na(Coat_Colour) & Coat_Colour=="Menil"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Site~., scales = "free_y")
+ggsave(here("graphs", "Menil.jpeg"), width = 10, height = 20)
+
+ggplot(filter(all_long_gg, Coat_Colour!="U" & !is.na(Coat_Colour) & Coat_Colour=="Melanistic"), aes(x=log, y=..count..)) +
+  geom_bar() +
+  geom_vline(xintercept = 0, size = 1.5, color = "orange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(color = 'gray'),
+    plot.subtitle = element_text(hjust = 0.5)
+    ) +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_grid(Site~., scales = "free_y")
+ggsave(here("graphs", "Melanistic.jpeg"), width = 10, height = 20)
+```
+
+```{r coat colours}
+Plan_B_clean$Internal_ID <- as.character(Plan_B_clean$Internal_ID)
+NMS$Other_Code <- as.character(NMS$Other_Code)
+Colour_Graphs <- bind_rows(Plan_B_clean, NMS, Turk, Clarendon)
+DaBigCountC <- all_long %>%
+  count(Measurement, Coat_Colour)
+DaBigCount <- all_long %>%
+  count(Measurement)
+
+ggplot(filter(Colour_Graphs, Element=="metacarpal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bd, y=Bp, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "Metacarpal"
+  )+
+  facet_wrap(Coat_Colour~.)
+
+ggsave(here("graphs", "MC_BdBp.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metacarpal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bd, y=Dp, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Dp",
+    title = "Metacarpal"
+  )+
+  facet_wrap(Coat_Colour~.)
+ggsave(here("graphs", "MC_BdDp.jpeg"), dpi = 100)
+
+
+ggplot(filter(Colour_Graphs, Element=="metacarpal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Dp, y=Bp, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dp",
+    y = "Bp",
+    title = "Metacarpal"
+  )+
+  facet_wrap(Coat_Colour~.)
+ggsave(here("graphs", "MC_DpBp.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metatarsal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bd, y=Bp, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "Metatarsal"
+  )+
+  facet_wrap(Coat_Colour~.)
+
+ggsave(here("graphs", "MT_BdBp.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metatarsal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bd, y=Dp, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Dp",
+    title = "Metatarsal"
+  )+
+  facet_wrap(Coat_Colour~.)
+ggsave(here("graphs", "MT_BdDp.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metatarsal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Dp, y=Bp, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dp",
+    y = "Bp",
+    title = "Metatarsal"
+  )+
+  facet_wrap(Coat_Colour~.)
+
+ggsave(here("graphs", "MT_DpBp.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metacarpal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bd, y=SD, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dp",
+    y = "Bp",
+    title = "Metacarpal"
+  )+
+  facet_wrap(Coat_Colour~.)
+ggsave(here("graphs", "MC_BdSD.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metatarsal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bd, y=SD, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "Metatarsal"
+  )+
+  facet_wrap(Coat_Colour~.)
+
+ggsave(here("graphs", "MT_BdSD.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metacarpal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bp, y=SD, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dp",
+    y = "Bp",
+    title = "Metacarpal"
+  )+
+  facet_wrap(Coat_Colour~.)
+ggsave(here("graphs", "MC_BpSD.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metatarsal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Bp, y=SD, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "Metatarsal"
+  )+
+  facet_wrap(Coat_Colour~.)
+
+ggsave(here("graphs", "MT_BpSD.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metacarpal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Dp, y=SD, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dp",
+    y = "Bp",
+    title = "Metacarpal"
+  )+
+  facet_wrap(Coat_Colour~.)
+ggsave(here("graphs", "MC_DpSD.jpeg"), dpi = 100)
+
+ggplot(filter(Colour_Graphs, Element=="metatarsal" & Coat_Colour != "U" & !is.na(Coat_Colour)), aes(x=Dp, y=SD, colour = Coat_Colour)) +
+  geom_point(show.legend = FALSE) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "Metatarsal"
+  )+
+  facet_wrap(Coat_Colour~.)
+
+ggsave(here("graphs", "MT_DpSD.jpeg"), dpi = 100)
+```

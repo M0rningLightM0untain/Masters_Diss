@@ -1,0 +1,617 @@
+---
+title: "master_analysis"
+author: "Jack Sudds"
+date: "13/07/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Package}
+library(tidyverse) #install.packages("tidyverse")
+library(readxl) #install.packages("readxl")
+library(here) #install.packages("here")
+library(janitor) #install.packages("janitor")
+library(kableExtra) #install.packages("kableExtra")
+library(skimr) #install.packages("skimr")
+library(dplyr) #install.packages("dplyr")
+library(RColorBrewer) #install.packages("RColorBrewer")
+library(formattable) #install.packages("formattable")
+library(wesanderson)#install.packages("wesanderson")
+library(reshape2)
+library(ggtext) #install.packages("ggtext")
+```
+
+```{r import}
+
+Plan_B <- read_excel(here("../data/master.xlsx"), range = "A1:AN993", sheet = "Plan_B")
+
+Clarendon <- read_excel(here("../data/master.xlsx"), range = "A1:Y11", sheet = "data")
+
+```
+
+```{r cleanup}
+
+Plan_B_clean = Plan_B[rowSums(is.na(Plan_B)) <= 31, ]
+
+B_femur = Plan_B_clean %>% filter(Element == "femur") %>% remove_empty("cols")
+B_scapula = Plan_B_clean %>% filter(Element == "scapula") %>% remove_empty("cols")
+B_humerus = Plan_B_clean %>% filter(Element == "humerus")%>% remove_empty("cols")
+B_radius = Plan_B_clean %>% filter(Element == "radius")%>% remove_empty("cols")
+B_tibia = Plan_B_clean %>% filter(Element == "tibia")%>% remove_empty("cols")
+B_astragalus = Plan_B_clean %>% filter(Element == "astragalus")%>% remove_empty("cols")
+B_metacarpal = Plan_B_clean %>% filter(Element == "metacarpal")%>% remove_empty("cols")
+B_metatarsal = Plan_B_clean %>% filter(Element == "metatarsal")%>% remove_empty("cols")
+B_calcaneus = Plan_B_clean %>% filter(Element == "calcaneus")%>% remove_empty("cols")
+B_ulna = Plan_B_clean %>% filter(Element == "ulna")%>% remove_empty("cols")
+
+```
+
+```{r Freq checks}
+
+Plan_B_elements <- Plan_B_clean %>%
+  count(Element)
+
+Plan_B_sex <- Plan_B_clean %>%
+  count(Sex)
+
+Clarendon_elements <- Clarendon %>%
+  count(Element)
+
+Plan_B_long <- melt(Plan_B_clean, value.name = "measurement", id=1:9, na.rm = TRUE)
+
+Termessosl <- Plan_B_long %>%
+  filter(Site == "Termessos")
+Termessos <- Plan_B_clean %>%
+  filter(Site == "Termessos")
+Phoenix_Park <- Plan_B_long %>%
+  filter(Site == "Phoenix Park")
+Epping <- Plan_B_long %>%
+  filter(Site == "Epping Forest")
+Richmond <- Plan_B_long %>%
+  filter(Site == "Richmond Park")
+Paris <- Plan_B_long %>%
+  filter(Site == "Paris_Menagerie")
+
+measures_count <- Plan_B_long %>%
+  count(Element, variable)
+```
+
+```{r termessos as wild baseline}
+
+T_Ecount <- Termessosl %>%
+  count(Element)
+TE_count <- Termessos %>%
+  count(Element)
+
+ggplot(filter(Termessos, Element == "astragalus"), aes(x=Bd, y=Dm, colour = Sex)) +
+  geom_point()
+
+```
+
+```{r freqs}
+
+freq_age <- Plan_B_clean[,c(2,8)]
+
+freq_sex <- Plan_B_clean[,c(2,7)]
+
+freq_site <- Plan_B_clean[,c(2,3)]
+
+freq_all <- Plan_B_clean[,c(2,3,7,8)]
+
+freq_age <- freq_age %>%
+  distinct() %>%
+  na.omit(freq_age)
+
+freq_sex <- freq_sex %>%
+  distinct() %>%
+  na.omit(freq_sex)
+
+freq_site <- freq_site %>%
+  distinct()
+
+freq_all <- freq_all %>%
+  distinct()
+
+ggplot(freq_age, aes(x=Age, y=..count..)) +
+  geom_histogram()
+
+ggplot(freq_sex, aes(x=Sex, y=..count..)) +
+  geom_bar()
+
+ggplot(freq_site, aes(x=Site, y=..count..)) +
+  geom_bar()
+
+ggplot(freq_all, aes(x=Age, y=..count.., fill = Sex)) +
+  geom_histogram()
+
+ggplot(freq_all, aes(x=Age, y=..count.., fill = Sex)) +
+  geom_histogram() +
+  facet_wrap(~Site)
+
+ggplot(freq_all, aes(x=Site, y=..count.., fill = Sex)) +
+  geom_bar()
+
+```
+
+```{r save graphs}
+
+ggplot(B_metacarpal, aes(x=Bd, y=Dd, colour = Coat_Colour, shape = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Dd",
+    title = "Metacarpal"
+  )
+
+ggsave(here("graphs", "Metatarsal_Bd_Dd_e.jpeg"), dpi = 700)
+
+```
+
+
+```{r test graphs}
+
+ggplot(subset(B_femur, !is.na(Coat_Colour)), aes(x=Bd, y=SD, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "SD",
+    title = "Femur"
+  )
+
+ggplot(subset(B_femur, !is.na(Coat_Colour)), aes(x=Bd, y=SD, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "SD",
+    title = "Femur"
+  )
+
+ggplot(B_femur, aes(x=Bd, y=Dd, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Dd",
+    title = "Femur"
+  )
+
+ggplot(subset(B_femur, !is.na(Coat_Colour)), aes(x=Bd, y=Bp, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "Femur"
+  )
+
+ggplot(subset(B_femur, !is.na(Coat_Colour)), aes(x=GL, y=GLC, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "GL",
+    y = "GLC",
+    title = "Femur colours"
+  )
+
+```
+
+```{r metatarsal}
+
+ggplot(B_metatarsal, aes(x=Dd, y=Dp, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dd",
+    y = "Dp",
+    title = "MT"
+  ) #+  facet_wrap(~Site)
+
+ggplot(B_metatarsal, aes(x=Dd, y=Bd, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dd",
+    y = "Bd",
+    title = "MT"
+  ) #+ facet_wrap(~Site)
+
+ggplot(B_metatarsal, aes(x=Dd, y=SD, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dd",
+    y = "SD",
+    title = "MT"
+  ) #+ facet_wrap(~Site)
+
+ggplot(B_metatarsal, aes(x=Dd, y=GL, colour = Site)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dd",
+    y = "GL",
+    title = "MT"
+  ) #+ facet_wrap(~Site)
+
+ggplot(B_metatarsal, aes(x=Bd, y=GL, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "GL",
+    title = "MT"
+  ) #+ facet_wrap(~Site)
+
+ggplot(B_metatarsal, aes(x=SD, y=GL, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "SD",
+    y = "GL",
+    title = "MT"
+  ) #+ facet_wrap(~Site)
+
+ggplot(B_metatarsal, aes(x=Dp, y=GL, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dp",
+    y = "GL",
+    title = "MT"
+  ) #+ facet_wrap(~Site)
+
+ggplot(B_metatarsal, aes(x=DD, y=`B@F`, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "DD",
+    y = "B@F",
+    title = "MT"
+  ) #+ facet_wrap(~Site)
+
+
+```
+
+```{r metacarpal}
+
+ggplot(B_metacarpal, aes(x=Bd, y=Bp, colour = Site)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "MC"
+  ) #+ facet_wrap(~Sex)
+
+ggplot(B_metacarpal, aes(x=Dd, y=Dp, colour = Site)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Dd",
+    y = "Dp",
+    title = "MC"
+  ) #+ facet_wrap(~Sex)
+
+```
+
+```{r humerus}
+
+ggplot(B_humerus, aes(x=Bd, y=Dd, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Dd",
+    title = "Humerus"
+  ) #+ facet_wrap(~Sex)
+
+ggplot(B_humerus, aes(x=BT, y=SD, colour = Site)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "BT",
+    y = "SD",
+    title = "Hum."
+  ) #+ facet_wrap(~Sex)
+
+ggplot(B_humerus, aes(x=BT, y=Bd, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "BT",
+    y = "Bd",
+    title = "MC"
+  ) #+ facet_wrap(~Sex)
+
+ggplot(B_humerus, aes(x=Bd, y=SD, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "SD",
+    title = "MC"
+  ) #+ facet_wrap(~Sex)
+
+ggplot(B_humerus, aes(x=Bp, y=HT, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bp",
+    y = "HT",
+    title = "Humerus colours"
+  ) #+ facet_wrap(~Sex)
+
+```
+
+```{r scapula}
+
+ggplot(subset(B_scapula, !is.na(Coat_Colour)), aes(x=SLC, y=BG, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "SLC",
+    y = "BG",
+    title = "Scapula Colours"
+  ) #+ facet_wrap(~Sex)
+
+ggplot(subset(B_scapula, !is.na(Coat_Colour)), aes(x=GLP, y=LG, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "GLP",
+    y = "LG",
+    title = "Scapula Colours"
+  ) #+ facet_wrap(~Sex)
+
+```
+
+
+```{r astragalus}
+
+ggplot(B_astragalus, aes(x=GLl, y=GLm, colour = Sex)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "GLl",
+    y = "GLm",
+    title = "Astragalus"
+  ) + facet_wrap(~Site)
+
+ggplot(subset(B_astragalus, !is.na(Coat_Colour)), aes(x=Bd, y=Dl, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Dl",
+    title = "Astragalus"
+  ) #+ facet_wrap(~Site)
+
+```
+
+```{r tibia}
+
+ggplot(subset(B_tibia, !is.na(Coat_Colour)), aes(x=Bd, y=Bp, colour = Coat_Colour)) +
+  geom_point() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = 'bold'),
+        panel.background = element_rect(fill = 'white'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'gray'),
+        axis.line = element_line(color = "black"),
+        panel.grid.minor.x = element_line(color = 'gray'),
+        panel.grid.minor.y = element_blank()
+    ) +
+  labs(
+    x = "Bd",
+    y = "Bp",
+    title = "Tibia"
+  )
+
+```
+
